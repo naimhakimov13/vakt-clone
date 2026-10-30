@@ -13,7 +13,8 @@ before(async () => { browser = await chromium.launch(); });
 after(async () => { await browser?.close(); });
 
 async function withPage(viewport, fn) {
-  const context = await browser.newContext({ viewport });
+  // Reduced motion turns off CSS transitions, so computed colors are the settled ones.
+  const context = await browser.newContext({ viewport, reducedMotion: 'reduce' });
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
