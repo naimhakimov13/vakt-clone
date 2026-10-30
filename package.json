@@ -1,0 +1,10 @@
+{
+  "name": "vakt-clone",
+  "private": true,
+  "scripts": {
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "playwright": "^1.48.0"
+  }
+}

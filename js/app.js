@@ -72,12 +72,15 @@
     <article class="product">
       <div class="product__img">${ART.product(p)}</div>
       <h3 class="product__name">${p.name}</h3>
-      <div class="product__action" data-action="${p.id}">${actionHtml(p)}</div>
+      <div class="product__foot" data-action="${p.id}">${actionHtml(p)}</div>
     </article>`;
 
   const actionHtml = (p) => {
     const q = qtyOf(p.id);
-    return q ? stepper(p.id, q) : `<button class="price-btn" type="button" data-inc="${p.id}">${money(p.price)}</button>`;
+    const control = q
+      ? stepper(p.id, q)
+      : `<button class="product__add" type="button" data-inc="${p.id}" aria-label="Добавить: ${p.name}">${PLUS}</button>`;
+    return `<span class="product__price">${money(p.price)}</span>${control}`;
   };
 
   function renderProductAction(id) {
@@ -113,6 +116,8 @@
     $('#cartTotal').textContent = sum;
     $('#cartBarTotal').textContent = sum;
     $('#cartBarCount').textContent = count();
+    $('#cartCount').textContent = count();
+    $('#cartCount').hidden = !cart.length;
     $('#cartBar').hidden = !cart.length;
     $('#orderBtn').disabled = !cart.length;
     if (!cart.length) toggleCartDrawer(false);

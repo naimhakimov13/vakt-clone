@@ -31,7 +31,10 @@
 
     <aside class="cart" id="cart" aria-label="Корзина">
       <div class="cart__head">
-        <h2>Корзина</h2>
+        <div class="cart__title">
+          <h2>Корзина</h2>
+          <span class="cart__count" id="cartCount" hidden>0</span>
+        </div>
         <button class="icon-btn" id="clearCart" type="button" aria-label="Очистить корзину">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>

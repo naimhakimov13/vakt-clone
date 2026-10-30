@@ -10,6 +10,13 @@ npx serve .        # or any static server, then open the printed URL
 
 Opening `index.html` directly also works.
 
+## Tests
+
+```sh
+npm install        # Playwright; run `npx playwright install chromium` if the browser is missing
+npm test
+```
+
 ## Structure
 
 - `index.html` — header, category bar, product sections, cart, checkout dialog
@@ -17,6 +24,7 @@ Opening `index.html` directly also works.
 - `js/menu.js` — site config, categories and products (names/prices from the live menu)
 - `js/art.js` — line icons and placeholder product illustrations
 - `js/app.js` — cart state (persisted in `localStorage["__cart"]`), scroll-spy, checkout
+- `tests/ui.test.js` — Playwright checks for the cart, checkout, contrast and layout
 
 ## Notes
 
