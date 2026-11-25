@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <title>Кафе Вакт - Вкусные стрипсы, крылья, твистеры и бургеры с быстрой доставкой</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Стрипсы, крылья, твистеры и бургеры с быстрой доставкой.">
+  <meta name="description" content="Заказывайте вкусные стрипсы, острые крылья, твистеры и бургеры в Кафе Вакт. Быстрая доставка, отличное качество и доступные цены. Сделайте заказ онлайн и наслаждайтесь горячими блюдами уже сейчас!">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Rubik:ital,wght@1,900&display=swap" rel="stylesheet">
@@ -31,7 +31,10 @@
 
     <aside class="cart" id="cart" aria-label="Корзина">
       <div class="cart__head">
-        <h2>Корзина</h2>
+        <div class="cart__title">
+          <h2>Корзина</h2>
+          <span class="cart__count" id="cartCount" data-cart-target hidden>0</span>
+        </div>
         <button class="icon-btn" id="clearCart" type="button" aria-label="Очистить корзину">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
@@ -49,12 +52,12 @@
     </aside>
   </main>
 
-  <button class="cart-bar" id="cartBar" type="button" hidden>
-    <span class="cart-bar__count" id="cartBarCount">0</span>
+  <button class="cart-bar" id="cartBar" type="button">
+    <span class="cart-bar__count" id="cartBarCount" data-cart-target>0</span>
     <span>Корзина</span>
     <strong id="cartBarTotal">0 смн</strong>
   </button>
-  <div class="scrim" id="cartScrim" hidden></div>
+  <div class="scrim" id="cartScrim"></div>
 
   <dialog class="modal" id="checkout" aria-labelledby="checkoutTitle">
     <form class="checkout" id="checkoutForm" novalidate>
@@ -85,7 +88,9 @@
           <label class="radio"><input type="radio" name="order_is_now" value="1" checked><span>Сейчас</span></label>
           <label class="radio"><input type="radio" name="order_is_now" value="0"><span>Указать</span></label>
         </div>
-        <input class="field__extra" name="order_time" type="time" hidden aria-label="Время приготовления">
+        <div class="collapse is-collapsed" id="timeWrap"><div class="collapse__inner">
+          <input class="field__extra" name="order_time" type="time" aria-label="Время приготовления">
+        </div></div>
       </fieldset>
 
       <fieldset class="field">
@@ -96,11 +101,13 @@
         </div>
       </fieldset>
 
-      <label class="field" id="addressField">
-        <span>Ваш адрес (улица, ориентир)</span>
-        <input name="delivery_address" type="text" autocomplete="street-address">
-        <em class="field__error">Укажите адрес доставки</em>
-      </label>
+      <div class="collapse" id="addressWrap"><div class="collapse__inner">
+        <label class="field" id="addressField">
+          <span>Ваш адрес (улица, ориентир)</span>
+          <input name="delivery_address" type="text" autocomplete="street-address">
+          <em class="field__error">Укажите адрес доставки</em>
+        </label>
+      </div></div>
 
       <fieldset class="field">
         <legend>Способ оплаты</legend>
@@ -121,7 +128,7 @@
 
     <div class="success" id="success" hidden>
       <div class="success__icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <svg viewBox="0 0 24 24"><path pathLength="1" d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
       <h2>Заказ оформлен!</h2>
       <p>Мы свяжемся с вами по номеру <b id="successPhone"></b> для подтверждения.</p>
