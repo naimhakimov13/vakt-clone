@@ -35,6 +35,8 @@ const text = (page, sel) => page.$eval(sel, (el) => el.textContent.trim());
 const contrastOf = (page, sel) => page.$eval(sel, (el) => {
   const parse = (c) => (c.match(/[\d.]+/g) || []).map(Number);
   const bgOf = (n) => {
+    // The active tab's red comes from the sliding pill behind it, not from the tab itself.
+    if (n.closest('.cat.is-active')) return parse(getComputedStyle(document.querySelector('.cat-indicator')).backgroundColor).slice(0, 3);
     for (; n; n = n.parentElement) {
       const [r, g, b, a = 1] = parse(getComputedStyle(n).backgroundColor);
       if (a > 0) return [r, g, b];
@@ -61,19 +63,20 @@ test('adding a product puts it in the cart and updates the total', () => withPag
 }));
 
 test('decrementing to zero removes the product from the cart', () => withPage(DESKTOP, async (page) => {
-  await add(page, 46);
-  await page.click(`${card(46)} [data-dec="46"]`);
-  assert.equal(await page.locator('#cartBody .cart-item').count(), 0);
-  assert.equal(await page.locator(`${card(46)} .stepper`).count(), 0);
+  await add(page, 5);
+  await page.click(`${card(5)} [data-dec="5"]`);
+  // The removed line fades out for 140ms before it leaves the DOM.
+  await page.waitForFunction(() => document.querySelectorAll('#cartBody .cart-item').length === 0);
+  assert.equal(await page.locator(`${card(5)} .stepper`).count(), 0);
   assert.equal(await page.isDisabled('#orderBtn'), true);
 }));
 
 test('cart is saved to localStorage under the original key', () => withPage(DESKTOP, async (page) => {
-  await add(page, 90);
-  await add(page, 90);
+  await add(page, 24);
+  await add(page, 24);
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('__cart')));
   assert.equal(saved.length, 1);
-  assert.equal(saved[0].id, 90);
+  assert.equal(saved[0].id, 24);
   assert.equal(saved[0].quantity, 2);
 }));
 
@@ -98,7 +101,8 @@ test('checkout validates phone and address, then submits', () => withPage(DESKTO
   assert.equal(await page.$eval('#addressField', (el) => el.classList.contains('is-invalid')), true);
 
   await page.click('label.radio:has-text("Самовывоз")');
-  assert.equal(await page.isHidden('#addressField'), true);
+  // The address field shrinks away over 200ms before it counts as hidden.
+  await page.waitForSelector('#addressField', { state: 'hidden' });
   await page.click(submit);
   await page.waitForSelector('#success', { state: 'visible' });
   assert.equal(await page.locator('#cartBody .cart-item').count(), 0);

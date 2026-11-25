@@ -28,7 +28,8 @@ npm test
 
 ## Notes
 
-- Product photos are placeholder illustrations. Put real images in `images/` and set `image: 'file.png'` on a product.
+- Menu, prices, pickup points, payment methods, product photos (`images/product/`), category icons (`images/category/`) and the logo are the real ones from vakt.tj, copied from its public read-only API (`/services/getProducts`, `/services/getConfigs`). Product ids match the live site. The internal Telegram chat ids the API returns for each point are intentionally not copied.
+- The line-art illustrations in `js/art.js` are only a fallback for a product or category without an image.
 - Orders are not sent anywhere by default; the payload is logged to the console.
   Set `SITE_CONFIG.apiBase` to POST to `${apiBase}/submitOrder` with the same fields as the original form:
   `phone, point_id, order_is_now, order_time, order_is_delivery, delivery_address, bank_id, comment` plus `products` and `total`.

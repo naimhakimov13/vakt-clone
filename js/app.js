@@ -7,6 +7,10 @@
 
   // ---------- Cart state ----------
   let cart = loadCart();
+  // Lines already in the cart at load do not animate in; only lines added afterwards do.
+  let renderedLines = new Set(cart.map((i) => i.id));
+  let leaveTimer;
+  const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function loadCart() {
     try {
@@ -29,13 +33,27 @@
   const count = () => cart.reduce((s, i) => s + i.quantity, 0);
 
   function setQty(id, qty) {
+    const before = qtyOf(id);
     const item = cart.find((i) => i.id === id);
     if (qty <= 0) cart = cart.filter((i) => i.id !== id);
     else if (item) item.quantity = qty;
     else cart.push({ id, quantity: qty });
     saveCart();
     renderProductAction(id);
-    renderCart();
+    // Only the swap between the price button and the stepper pops; a +/- tap on an item already in the cart does not.
+    if (before === 0 || qty <= 0) {
+      document.querySelector(`[data-action="${id}"] .stepper, [data-action="${id}"] .product__add`)?.classList.add('is-fresh');
+    }
+    // A removed line fades out first; totals and the order button update immediately.
+    const line = qty <= 0 && !reduceMotion() ? $(`.cart-item[data-id="${id}"]`) : null;
+    if (line) {
+      renderTotals();
+      line.classList.add('is-leaving');
+      clearTimeout(leaveTimer);
+      leaveTimer = setTimeout(renderCart, 140);
+    } else {
+      renderCart();
+    }
   }
 
   // ---------- Rendering ----------
@@ -48,12 +66,32 @@
       <button type="button" data-inc="${id}" aria-label="Добавить ещё">${PLUS}</button>
     </div>`;
 
+  // A photo with an opaque background carries its own tile colour so the tile blends into it.
+  const plateStyle = (p) => (p.plate ? ` style="--plate:${p.plate}"` : '');
+
   function renderCategories() {
-    $('#categories').innerHTML = CATEGORIES.map((c, i) => `
+    $('#categories').innerHTML = '<span class="cat-indicator" aria-hidden="true"></span>' + CATEGORIES.map((c, i) => `
       <button class="cat${i === 0 ? ' is-active' : ''}" type="button" data-cat="${c.id}">
-        <span class="cat__icon">${ART.icon(c.icon)}</span>
+        <span class="cat__icon${c.iconBare ? ' cat__icon--bare' : ''}">${c.iconImage ? `<img src="images/${c.iconImage}" alt="">` : ART.icon(c.icon)}</span>
         <span class="cat__name">${c.name}</span>
       </button>`).join('');
+  }
+
+  // Active-tab pill: one element slides behind the tabs. Only transform animates; its size is set instantly.
+  function placeIndicator(animate) {
+    const pill = $('.cat-indicator');
+    const tab = $('.cat.is-active');
+    if (!pill || !tab) return;
+    if (!animate) pill.style.transition = 'none';
+    pill.style.width = `${tab.offsetWidth}px`;
+    pill.style.height = `${tab.offsetHeight}px`;
+    pill.style.transform = `translate(${tab.offsetLeft}px, ${tab.offsetTop}px)`;
+    if (!animate) { void pill.offsetWidth; pill.style.transition = ''; }
+  }
+  function initTabIndicator() {
+    placeIndicator(false);
+    // Fonts loading or a breakpoint change can resize the tabs: re-snap without animating.
+    new ResizeObserver(() => placeIndicator(false)).observe($('#categories'));
   }
 
   function renderSections() {
@@ -70,8 +108,9 @@
 
   const productCard = (p) => `
     <article class="product">
-      <div class="product__img">${ART.product(p)}</div>
+      <div class="product__img"${plateStyle(p)}>${ART.product(p)}</div>
       <h3 class="product__name">${p.name}</h3>
+      ${p.note ? `<p class="product__note">${p.note}</p>` : ''}
       <div class="product__foot" data-action="${p.id}">${actionHtml(p)}</div>
     </article>`;
 
@@ -82,6 +121,18 @@
       : `<button class="product__add" type="button" data-inc="${p.id}" aria-label="Добавить: ${p.name}">${PLUS}</button>`;
     return `<span class="product__price">${money(p.price)}</span>${control}`;
   };
+
+  // Photos start transparent and fade in once loaded. Cached ones are shown straight away, with no fade.
+  function revealImages() {
+    document.querySelectorAll('.product__img img:not(.is-loaded)').forEach((img) => {
+      const show = () => img.classList.add('is-loaded');
+      if (img.complete) show();
+      else {
+        img.addEventListener('load', show, { once: true });
+        img.addEventListener('error', show, { once: true });
+      }
+    });
+  }
 
   function renderProductAction(id) {
     const el = document.querySelector(`[data-action="${id}"]`);
@@ -97,12 +148,13 @@
           <span>Корзина пуста, чтобы добавить выберите из списка</span>
         </div>`;
     } else {
+      const seen = renderedLines;
       body.innerHTML = cart.map(({ id, quantity }) => {
         const p = byId.get(id);
         return `
-          <div class="cart-item">
+          <div class="cart-item${seen.has(id) ? '' : ' is-new'}" data-id="${id}">
             <div class="cart-item__left">
-              <div class="cart-item__img">${ART.product(p)}</div>
+              <div class="cart-item__img"${plateStyle(p)}>${ART.product(p)}</div>
               <div class="cart-item__text">
                 <div class="cart-item__name">${p.name}</div>
                 <div class="cart-item__price">${money(p.price)}</div>
@@ -112,22 +164,110 @@
           </div>`;
       }).join('');
     }
+    renderedLines = new Set(cart.map((i) => i.id));
+    renderTotals();
+  }
+
+  function renderTotals() {
     const sum = money(total());
     $('#cartTotal').textContent = sum;
     $('#cartBarTotal').textContent = sum;
     $('#cartBarCount').textContent = count();
     $('#cartCount').textContent = count();
     $('#cartCount').hidden = !cart.length;
-    $('#cartBar').hidden = !cart.length;
+    $('#cartBar').classList.toggle('is-shown', cart.length > 0);
     $('#orderBtn').disabled = !cart.length;
     if (!cart.length) toggleCartDrawer(false);
+  }
+
+  // ---------- Fly to cart ----------
+  // Same recipe as the add-to-cart on harid.disti.site: the product photo lifts off the card and falls into the cart
+  // badge on an accelerating curve (shrinking, fading to 40%), then the badge bumps. Skipped with reduced motion.
+  const FLY = { photo: 88, dot: 32, ms: 560, ease: 'cubic-bezier(.5, 0, .75, 0)', bumpMs: 320, bumpEase: 'cubic-bezier(.34, 1.56, .64, 1)' };
+  const centerOf = (r) => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+  const inViewport = (r) => {
+    const c = centerOf(r);
+    return r.width > 0 && r.height > 0 && c.x >= 0 && c.x <= innerWidth && c.y >= 0 && c.y <= innerHeight;
+  };
+
+  function flyToCart(...sources) {
+    if (reduceMotion() || typeof Element.prototype.animate !== 'function') return;
+    // The last visible target wins: the phone bar's badge when it is shown, else the cart panel's badge.
+    const visible = [...document.querySelectorAll('[data-cart-target]')].filter((n) => {
+      const r = n.getBoundingClientRect();
+      return r.width > 0 && r.height > 0;
+    });
+    const target = visible[visible.length - 1];
+    const source = sources.find((el) => el && el.isConnected && inViewport(el.getBoundingClientRect()));
+    if (!target || !source) return;
+
+    const from = source.getBoundingClientRect();
+    const img = source instanceof HTMLImageElement ? source : source.querySelector('img');
+    const size = img ? Math.max(24, Math.min(FLY.photo, from.width, from.height)) : FLY.dot;
+    const flyer = document.createElement(img ? 'img' : 'div');
+    if (img) {
+      flyer.src = img.currentSrc || img.src;
+      flyer.alt = '';
+      const plate = img.closest('.product__img');
+      Object.assign(flyer.style, {
+        objectFit: 'contain', padding: '6px', boxSizing: 'border-box', borderRadius: '14px',
+        boxShadow: '0 6px 20px rgb(0 0 0 / .25)', background: plate ? getComputedStyle(plate).backgroundColor : '#f8f8f8',
+      });
+    } else {
+      Object.assign(flyer.style, { borderRadius: '50%', background: '#d81f2a', boxShadow: '0 4px 14px rgb(0 0 0 / .25)' });
+    }
+    const a = centerOf(from);
+    const to = target.getBoundingClientRect();
+    const b = centerOf(to);
+    // The phone bar slides up as it appears: aim for where its badge will rest, not where it is this instant.
+    const bar = target.closest('.cart-bar');
+    if (bar) {
+      const lift = new DOMMatrix(getComputedStyle(bar).transform);
+      b.x -= lift.m41;
+      b.y -= lift.m42;
+    }
+    const scale = Math.min(1, Math.max(0.12, Math.max(to.width, to.height) / size));
+    Object.assign(flyer.style, {
+      position: 'fixed', left: `${a.x - size / 2}px`, top: `${a.y - size / 2}px`, width: `${size}px`, height: `${size}px`,
+      margin: '0', zIndex: '1000', pointerEvents: 'none', willChange: 'transform, opacity',
+    });
+    flyer.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(flyer);
+
+    let done = false;
+    const finish = (landed) => {
+      if (done) return;
+      done = true;
+      flyer.remove();
+      if (landed) bump(target);
+    };
+    const flight = flyer.animate(
+      [{ transform: 'translate(0, 0) scale(1)', opacity: 1 }, { transform: `translate(${b.x - a.x}px, ${b.y - a.y}px) scale(${scale})`, opacity: 0.4 }],
+      { duration: FLY.ms, easing: FLY.ease, fill: 'forwards' },
+    );
+    flight.onfinish = () => finish(true);
+    flight.oncancel = () => finish(false);
+    setTimeout(() => finish(false), FLY.ms + 500); // never leave a flyer behind
+  }
+
+  function bump(el) {
+    el.animate(
+      [{ transform: 'scale(1)' }, { transform: 'scale(1.22)', offset: 0.4 }, { transform: 'scale(1)' }],
+      { duration: FLY.bumpMs, easing: FLY.bumpEase },
+    );
   }
 
   // ---------- Interactions ----------
   document.addEventListener('click', (e) => {
     const inc = e.target.closest('[data-inc]');
     const dec = e.target.closest('[data-dec]');
-    if (inc) setQty(+inc.dataset.inc, qtyOf(+inc.dataset.inc) + 1);
+    if (inc) {
+      // Look up the card first: the add button is replaced as soon as the quantity changes.
+      const card = inc.closest('.product');
+      setQty(+inc.dataset.inc, qtyOf(+inc.dataset.inc) + 1);
+      // Adding from a product card sends its photo flying to the cart; the stepper inside the cart does not.
+      if (card) flyToCart(card.querySelector('.product__img img'), card.querySelector('.product__img'));
+    }
     if (dec) setQty(+dec.dataset.dec, qtyOf(+dec.dataset.dec) - 1);
   });
 
@@ -161,6 +301,7 @@
         b.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
       }
     });
+    placeIndicator(true);
   }
   function initScrollSpy() {
     const io = new IntersectionObserver((entries) => {
@@ -174,7 +315,7 @@
   // Mobile cart drawer
   function toggleCartDrawer(open) {
     $('#cart').classList.toggle('is-open', open);
-    $('#cartScrim').hidden = !open;
+    $('#cartScrim').classList.toggle('is-open', open);
   }
   $('#cartBar').addEventListener('click', () => toggleCartDrawer(true));
   $('#closeCart').addEventListener('click', () => toggleCartDrawer(false));
@@ -190,21 +331,39 @@
       <label class="radio"><input type="radio" name="bank_id" value="${b.id}"${i === 0 ? ' checked' : ''}><span>${b.name}</span></label>`).join('');
 
     form.addEventListener('change', (e) => {
-      if (e.target.name === 'order_is_now') form.order_time.hidden = e.target.value === '1';
-      if (e.target.name === 'order_is_delivery') $('#addressField').hidden = e.target.value === '0';
+      if (e.target.name === 'order_is_now') setCollapsed($('#timeWrap'), e.target.value === '1');
+      if (e.target.name === 'order_is_delivery') setCollapsed($('#addressWrap'), e.target.value === '0');
     });
     form.addEventListener('input', (e) => e.target.closest('.field')?.classList.remove('is-invalid'));
     form.phone.addEventListener('input', () => (form.phone.value = formatPhone(form.phone.value)));
 
     $('#orderBtn').addEventListener('click', openCheckout);
-    $('#cancelCheckout').addEventListener('click', () => dialog.close());
-    $('#successClose').addEventListener('click', () => dialog.close());
-    dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
+    $('#cancelCheckout').addEventListener('click', closeDialog);
+    $('#successClose').addEventListener('click', closeDialog);
+    dialog.addEventListener('click', (e) => { if (e.target === dialog) closeDialog(); });
+    // Esc closes through the same fade-out instead of cutting the dialog off.
+    dialog.addEventListener('cancel', (e) => { e.preventDefault(); closeDialog(); });
     form.addEventListener('submit', submitOrder);
   }
 
+  const setCollapsed = (wrap, collapsed) => wrap.classList.toggle('is-collapsed', collapsed);
+
+  // A <dialog> vanishes the moment it closes, so play the exit first, then close it.
+  let closing = false;
+  function closeDialog() {
+    if (!dialog.open || closing) return;
+    if (reduceMotion()) { dialog.close(); return; }
+    closing = true;
+    dialog.classList.add('is-closing');
+    setTimeout(() => {
+      dialog.close();
+      dialog.classList.remove('is-closing');
+      closing = false;
+    }, 140);
+  }
+
   function openCheckout() {
-    if (!cart.length) return;
+    if (!cart.length || dialog.open) return;
     form.hidden = false;
     $('#success').hidden = true;
     $('#checkoutTotal').textContent = money(total());
@@ -273,8 +432,8 @@
       ids.forEach(renderProductAction);
       renderCart();
       form.reset();
-      form.order_time.hidden = true;
-      $('#addressField').hidden = false;
+      setCollapsed($('#timeWrap'), true);
+      setCollapsed($('#addressWrap'), false);
     } catch (err) {
       toast('Не удалось оформить заказ. Попробуйте ещё раз.');
       console.error(err);
@@ -303,7 +462,9 @@
   phoneLink.querySelector('span').textContent = cfg.phone;
 
   renderCategories();
+  initTabIndicator();
   renderSections();
+  revealImages();
   renderCart();
   initScrollSpy();
   initCheckout();

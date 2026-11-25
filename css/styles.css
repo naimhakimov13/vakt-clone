@@ -11,12 +11,15 @@
   --bg: #f5f5f5;
   --card: #fff;
   --field: #f2f2f3;
-  --plate: #f8f3ed;       /* behind product illustrations */
+  --plate: #f8f8f8;       /* behind product photos; matches the near-white backdrop most of them ship with */
 
   --r-s: 8px;
   --r-m: 14px;
   --r-pill: 999px;
   --shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 2px 10px rgba(0, 0, 0, .04);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);  /* for things that move across the screen */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);      /* for things that appear or leave */
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);   /* bottom drawer */
 
   --header-h: 72px;
   --cart-w: 360px;
@@ -80,19 +83,38 @@ h1, h2, h3, p { margin: 0; }
 .menu__content::-webkit-scrollbar { display: none; }
 
 /* Categories */
-.categories { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding: 2px; margin: -2px; }
+.categories { position: relative; isolation: isolate; display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding: 2px; margin: -2px; }
 .categories::-webkit-scrollbar { display: none; }
+/* Layers inside .categories, back to front: each tab's white card (::before), the sliding red pill, the tab content.
+   Only the pill moves; the active tab's text colour changes on the same 240ms clock so they land together. */
 .cat {
-  flex: 0 0 96px; padding: 12px 6px 10px; border: 1px solid var(--line); border-radius: var(--r-m);
-  background: var(--card); color: var(--ink-2);
+  position: relative; flex: 0 0 96px; padding: 12px 6px 10px; border: 1px solid transparent; border-radius: var(--r-m);
+  color: var(--ink-2);
   display: flex; flex-direction: column; align-items: center; gap: 6px;
-  transition: background-color .15s, border-color .15s, color .15s;
+  transition: color 240ms var(--ease-in-out);
 }
-.cat:hover { border-color: var(--line-strong); }
-.cat__icon { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
+.cat::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; border: 1px solid var(--line); border-radius: var(--r-m);
+  background: var(--card); transition: border-color 160ms ease;
+}
+.cat__icon, .cat__name { position: relative; }
+.cat-indicator {
+  position: absolute; top: 0; left: 0; z-index: 0; pointer-events: none;
+  border-radius: var(--r-m); background: var(--red);
+  transition: transform 240ms var(--ease-in-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .cat:not(.is-active):hover::before { border-color: var(--line-strong); }
+}
+.cat__icon { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; }
 .cat__icon svg { width: 40px; height: 40px; stroke: currentColor; }
+/* The real icon PNGs ship with their own bordered tile (74px, ~8px radius): show it whole and crisp. */
+.cat__icon img { width: 56px; height: 56px; object-fit: contain; border-radius: 6px; }
+/* The cup icon has no tile of its own: give it the same one. */
+.cat__icon--bare img { padding: 8px; background: #fff; border: 1px solid #e6e9f0; }
 .cat__name { text-align: center; font-size: 13px; font-weight: 600; line-height: 1.25; }
-.cat.is-active { background: var(--red); border-color: var(--red); color: #fff; }
+.cat.is-active { color: #fff; }
+.cat.is-active::before { border-color: var(--red); }
 
 /* Sections & product cards */
 .section { display: flex; flex-direction: column; gap: 16px; }
@@ -109,6 +131,7 @@ h1, h2, h3, p { margin: 0; }
 .product__img img, .product__img svg { width: 100%; height: 100%; }
 .product__img img { object-fit: contain; }
 .product__name { margin: 12px 4px 0; font-size: 15px; font-weight: 700; line-height: 1.25; }
+.product__note { margin: 4px 4px 0; font-size: 12.5px; line-height: 1.35; color: var(--ink-2); }
 .product__foot {
   margin: auto 0 0 4px; padding-top: 12px; min-height: 52px;
   display: flex; align-items: center; justify-content: space-between; gap: 6px;
@@ -116,9 +139,10 @@ h1, h2, h3, p { margin: 0; }
 .product__price { font-size: 16px; font-weight: 800; white-space: nowrap; }
 .product__add {
   flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%; background: var(--red); color: #fff;
-  display: grid; place-items: center; transition: background-color .15s;
+  display: grid; place-items: center; transition: background-color .15s, transform 120ms var(--ease-out);
 }
 .product__add:hover { background: var(--red-dark); }
+.product__add:active { transform: scale(.92); }
 .product__add svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; fill: none; }
 
 .stepper {
@@ -128,9 +152,10 @@ h1, h2, h3, p { margin: 0; }
 }
 .stepper button {
   width: var(--step); height: var(--step); border-radius: 50%; background: #fff; color: var(--ink);
-  display: grid; place-items: center; box-shadow: 0 1px 2px rgba(0, 0, 0, .08); transition: color .15s;
+  display: grid; place-items: center; box-shadow: 0 1px 2px rgba(0, 0, 0, .08); transition: color .15s, transform 120ms var(--ease-out);
 }
 .stepper button:hover { color: var(--red); }
+.stepper button:active { transform: scale(.9); }
 .stepper button svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; fill: none; }
 .stepper b { min-width: 24px; text-align: center; font-size: 15px; font-weight: 700; }
 
@@ -152,9 +177,10 @@ h1, h2, h3, p { margin: 0; }
 }
 .icon-btn {
   width: 40px; height: 40px; border-radius: 50%; color: var(--muted);
-  display: flex; align-items: center; justify-content: center; transition: background-color .15s, color .15s;
+  display: flex; align-items: center; justify-content: center; transition: background-color .15s, color .15s, transform 120ms var(--ease-out);
 }
 .icon-btn:hover { background: var(--field); color: var(--ink); }
+.icon-btn:active { transform: scale(.92); }
 .icon-btn svg { width: 22px; height: 22px; }
 .cart__close { display: none; }
 .cart__panel { flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -187,9 +213,9 @@ h1, h2, h3, p { margin: 0; }
 
 .btn {
   height: 52px; padding: 0 24px; border-radius: var(--r-pill); font-size: 16px; font-weight: 700;
-  text-align: center; transition: background-color .15s, transform .1s;
+  text-align: center; transition: background-color .15s, transform 120ms var(--ease-out);
 }
-.btn:active { transform: scale(.98); }
+.btn:active { transform: scale(.97); }
 .btn--primary, .btn--order { background: var(--red); color: #fff; }
 .btn--primary:hover, .btn--order:hover { background: var(--red-dark); }
 .btn--order { width: 100%; }
@@ -203,10 +229,19 @@ h1, h2, h3, p { margin: 0; }
   position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 20; height: 56px; padding: 0 22px 0 10px;
   border-radius: var(--r-pill); background: var(--red); color: #fff; font-weight: 700;
   display: flex; align-items: center; gap: 12px; box-shadow: 0 6px 18px rgba(0, 0, 0, .18);
+  /* Slides up when the first item is added and back down when the cart empties. */
+  transform: translateY(calc(100% + 24px)); visibility: hidden;
+  transition: transform 280ms var(--ease-drawer), visibility 0s 280ms;
 }
+.cart-bar.is-shown { transform: none; visibility: visible; transition-delay: 0s; }
+.cart-bar.is-shown:active { transform: scale(.98); transition-duration: 120ms; }
 .cart-bar strong { margin-left: auto; }
 .cart-bar__count { min-width: 36px; height: 36px; padding: 0 8px; border-radius: var(--r-pill); background: #fff; color: var(--red); display: grid; place-items: center; }
-.scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, .4); z-index: 29; }
+.scrim {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, .4); z-index: 29;
+  opacity: 0; visibility: hidden; transition: opacity 240ms ease, visibility 0s 240ms;
+}
+.scrim.is-open { opacity: 1; visibility: visible; transition-delay: 0s; }
 @media (min-width: 901px) { .cart-bar, .scrim { display: none !important; } }
 
 /* Checkout dialog */
@@ -215,8 +250,15 @@ h1, h2, h3, p { margin: 0; }
   border-radius: var(--r-m); color: var(--ink); background: #fff; box-shadow: 0 20px 50px rgba(0, 0, 0, .2);
 }
 .modal::backdrop { background: rgba(0, 0, 0, .4); }
-.modal[open] { animation: pop .18s ease-out; }
+.modal[open] { animation: pop 200ms var(--ease-out); }
+.modal[open]::backdrop { animation: fade-in 200ms var(--ease-out); }
+/* Closing is driven from JS (.is-closing) because a <dialog> disappears the instant it closes. */
+.modal.is-closing { animation: pop-out 140ms var(--ease-out) forwards; }
+.modal.is-closing::backdrop { animation: fade-out 140ms var(--ease-out) forwards; }
 @keyframes pop { from { opacity: 0; transform: translateY(8px); } }
+@keyframes pop-out { to { opacity: 0; transform: translateY(8px) scale(.98); } }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes fade-out { to { opacity: 0; } }
 .checkout { display: flex; flex-direction: column; }
 .checkout__head {
   padding: 20px 24px; border-bottom: 1px solid var(--line);
@@ -244,10 +286,17 @@ h1, h2, h3, p { margin: 0; }
 }
 .field input:hover, .field select:hover { border-color: var(--line-strong); }
 .field input:focus, .field select:focus { border-color: var(--ink); background-color: #fff; }
-.field__extra { margin-top: 4px; }
+.field__extra { margin-top: 12px; }
 .field__error { display: none; color: var(--red); font-size: 13px; font-style: normal; }
 .field.is-invalid input { border-color: var(--red); }
-.field.is-invalid .field__error { display: block; }
+.field.is-invalid .field__error { display: block; animation: error-in 160ms var(--ease-out); }
+
+/* A field that appears or disappears (time, delivery address) grows and shrinks instead of jumping. */
+.collapse { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 200ms var(--ease-out); }
+.collapse__inner { min-height: 0; overflow: hidden; transition: opacity 160ms var(--ease-out), visibility 0s; }
+.collapse.is-collapsed { grid-template-rows: 0fr; }
+.collapse.is-collapsed .collapse__inner { opacity: 0; visibility: hidden; transition: opacity 120ms var(--ease-out), visibility 0s 200ms; }
+.field > .collapse { margin-top: -8px; } /* cancels the fieldset's flex gap while collapsed */
 
 /* Radio groups render as pill toggles; the native input stays on top for clicks and keyboard. */
 .radios { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -295,7 +344,7 @@ h1, h2, h3, p { margin: 0; }
   .cart {
     position: fixed; inset: auto 0 0 0; z-index: 30; width: auto; height: 82vh; margin: 0;
     border-radius: var(--r-m) var(--r-m) 0 0;
-    transform: translateY(100%); transition: transform .28s ease;
+    transform: translateY(100%); transition: transform 280ms var(--ease-drawer);
   }
   .cart.is-open { transform: none; }
   .cart__close { display: flex; }
@@ -325,6 +374,35 @@ h1, h2, h3, p { margin: 0; }
   .checkout__actions { padding: 16px 20px 20px; }
   .radio span { padding: 0 16px; }
 }
+/* ---------- Motion ----------
+   Add to cart: only the swap between the price button and the stepper pops in (it grows from the button's side);
+   cart lines fade in and out. Product photos fade in as they load instead of popping in. */
+@keyframes control-in { from { opacity: 0; transform: scale(.9); } }
+.product__foot .is-fresh { transform-origin: right center; animation: control-in 140ms var(--ease-out); }
+
+@keyframes line-in { from { opacity: 0; transform: translateY(-6px); } }
+.cart-item { transition: opacity 140ms var(--ease-out), transform 140ms var(--ease-out); }
+.cart-item.is-new { animation: line-in 180ms var(--ease-out); }
+.cart-item.is-leaving { opacity: 0; transform: translateX(10px); }
+
+.product__img img { opacity: 0; transition: opacity 200ms var(--ease-out); }
+.product__img img.is-loaded { opacity: 1; }
+
+@keyframes error-in { from { opacity: 0; transform: translateY(-4px); } }
+
+/* Order placed: the badge pops, the check draws itself, then the text rises in. Inside the media query so that with
+   reduced motion the check is simply drawn. */
+@keyframes success-pop { from { opacity: 0; transform: scale(.6); } }
+@keyframes check-draw { to { stroke-dashoffset: 0; } }
+@keyframes rise-in { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: no-preference) {
+  .success:not([hidden]) .success__icon { animation: success-pop 380ms cubic-bezier(.34, 1.56, .64, 1) both; }
+  .success:not([hidden]) .success__icon path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: check-draw 360ms 160ms var(--ease-out) forwards; }
+  .success:not([hidden]) h2 { animation: rise-in 240ms 120ms var(--ease-out) both; }
+  .success:not([hidden]) p { animation: rise-in 240ms 180ms var(--ease-out) both; }
+  .success:not([hidden]) .btn { animation: rise-in 240ms 240ms var(--ease-out) both; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
