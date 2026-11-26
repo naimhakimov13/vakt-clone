@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Reel stage</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* 675x1200 CSS px, captured at deviceScaleFactor 1.6 = 1080x1920 (Instagram Reels, 9:16). */
+  :root { --red: #d81f2a; --ink: #121214; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 675px; height: 1200px; overflow: hidden; }
+  body {
+    font-family: Manrope, system-ui, sans-serif; color: #fff; -webkit-font-smoothing: antialiased;
+    background:
+      radial-gradient(520px 620px at 50% 62%, rgba(216, 31, 42, .55), rgba(216, 31, 42, 0) 70%),
+      radial-gradient(900px 500px at 50% -10%, #2a1416, rgba(42, 20, 22, 0) 70%),
+      var(--ink);
+  }
+
+  .top { position: absolute; left: 0; right: 0; top: 78px; text-align: center; height: 170px; }
+  .label {
+    display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 16px; border-radius: 999px;
+    background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .16);
+    font-size: 15px; font-weight: 700; letter-spacing: .2px; color: rgba(255, 255, 255, .92);
+  }
+  .label i { width: 8px; height: 8px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 3px rgba(216, 31, 42, .35); }
+  .captions { position: relative; margin-top: 18px; height: 110px; }
+  .cap {
+    position: absolute; left: 30px; right: 30px; top: 0;
+    font-size: 44px; line-height: 1.12; font-weight: 800; letter-spacing: -1px; text-wrap: balance;
+    opacity: 0; transform: translateY(18px);
+    transition: opacity 420ms cubic-bezier(.23, 1, .32, 1), transform 520ms cubic-bezier(.23, 1, .32, 1);
+  }
+  .cap small { display: block; margin-top: 10px; font-size: 21px; font-weight: 600; letter-spacing: 0; color: rgba(255, 255, 255, .72); }
+  .cap.is-in { opacity: 1; transform: none; }
+  .cap.is-out { opacity: 0; transform: translateY(-14px); transition-duration: 260ms; }
+
+  /* Phone: 390 wide screen, 50px status bar + 790px browser viewport. */
+  .phone {
+    position: absolute; left: 50%; top: 270px; width: 414px; height: 864px; margin-left: -207px;
+    border-radius: 60px; padding: 12px; background: #0b0b0c;
+    box-shadow: 0 0 0 2px #2c2c30, 0 40px 90px rgba(0, 0, 0, .55), inset 0 0 0 1px #3a3a3f;
+    transform: translateY(120px); opacity: 0;
+    transition: transform 900ms cubic-bezier(.23, 1, .32, 1), opacity 600ms ease;
+  }
+  body.go .phone { transform: none; opacity: 1; }
+  .screen { position: relative; width: 390px; height: 840px; border-radius: 48px; overflow: hidden; background: #f5f5f5; }
+  .status {
+    position: relative; height: 50px; background: var(--red); display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 30px 0 38px; font-size: 16px; font-weight: 700; color: #fff;
+  }
+  .island { position: absolute; left: 50%; top: 11px; width: 118px; height: 32px; margin-left: -59px; border-radius: 20px; background: #000; }
+  .status svg { display: block; height: 13px; fill: #fff; }
+  .icons { display: flex; gap: 6px; align-items: center; }
+  iframe { display: block; width: 390px; height: 716px; border: 0; background: #f5f5f5; }
+  /* Safari-style bottom address bar, so the page sits in a real browser and clears the rounded corners. */
+  .addr { position: relative; height: 74px; background: #f7f7f8; border-top: 1px solid #e4e4e6; }
+  .addr__pill {
+    position: absolute; left: 16px; right: 16px; top: 9px; height: 40px; border-radius: 13px; background: #e8e8ea;
+    display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 15px; font-weight: 600; color: #1c1c1e;
+  }
+  .addr__pill svg { width: 11px; height: 13px; fill: #1c1c1e; }
+  .addr__pill .aa { position: absolute; left: 14px; font-size: 14px; font-weight: 700; }
+  .addr__pill .re { position: absolute; right: 13px; width: 16px; height: 16px; fill: none; stroke: #1c1c1e; stroke-width: 2; stroke-linecap: round; }
+  .home { position: absolute; left: 50%; bottom: 7px; width: 134px; height: 5px; margin-left: -67px; border-radius: 3px; background: #111; }
+
+  /* Finger taps */
+  .tap {
+    position: absolute; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; pointer-events: none; z-index: 50;
+    background: rgba(255, 255, 255, .38); border: 2px solid rgba(255, 255, 255, .9);
+    box-shadow: 0 2px 14px rgba(0, 0, 0, .35);
+    animation: tap 650ms cubic-bezier(.23, 1, .32, 1) forwards;
+  }
+  @keyframes tap {
+    0% { transform: scale(1.5); opacity: 0; }
+    25% { transform: scale(.8); opacity: 1; }
+    60% { transform: scale(.85); opacity: 1; }
+    100% { transform: scale(1.25); opacity: 0; }
+  }
+
+  .sign {
+    position: absolute; left: 0; right: 0; bottom: 26px; text-align: center;
+    font-size: 17px; font-weight: 700; color: rgba(255, 255, 255, .6); letter-spacing: .3px;
+  }
+  .sign b { color: #fff; }
+
+  /* Outro: phone steps back, CTA takes the top. */
+  body.outro .phone { transform: translateY(40px) scale(.9); }
+  .cta {
+    display: flex; width: fit-content; align-items: center; gap: 10px; margin: 20px auto 0; height: 52px; padding: 0 26px; border-radius: 999px;
+    background: var(--red); color: #fff; font-size: 20px; font-weight: 800; letter-spacing: 0;
+    box-shadow: 0 10px 30px rgba(216, 31, 42, .5);
+  }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="label"><i></i><span id="label">Концепт редизайна · vakt.tj</span></div>
+    <div class="captions" id="captions"></div>
+  </div>
+
+  <div class="phone" id="phone">
+    <div class="screen">
+      <div class="status">
+        <span>9:41</span>
+        <div class="island"></div>
+        <div class="icons">
+          <svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+          <svg viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.5" fill="none" stroke="#fff" stroke-opacity=".5"/><rect x="2.5" y="2.5" width="17" height="8" rx="2"/><rect x="25" y="4.5" width="2" height="4" rx="1" fill-opacity=".5"/></svg>
+        </div>
+      </div>
+      <iframe id="site" src="../site/index.html" title="Сайт"></iframe>
+      <div class="addr">
+        <div class="addr__pill">
+          <span class="aa">AA</span>
+          <svg viewBox="0 0 11 13"><path d="M2.5 5.5V3.8a3 3 0 0 1 6 0v1.7h.5a1.5 1.5 0 0 1 1.5 1.5v4.5A1.5 1.5 0 0 1 9 13H2A1.5 1.5 0 0 1 .5 11.5V7A1.5 1.5 0 0 1 2 5.5zm1.5 0h3V3.8a1.5 1.5 0 0 0-3 0z"/></svg>
+          vakt.tj
+          <svg class="re" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.6-3.7M13 2.5v3h-3"/></svg>
+        </div>
+        <div class="home"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sign" id="sign"></div>
+
+<script>
+  const captions = document.getElementById('captions');
+  window.stage = {
+    setSign(html) { document.getElementById('sign').innerHTML = html; },
+    setLabel(text) { document.getElementById('label').textContent = text; },
+    caption(html) {
+      captions.querySelectorAll('.cap.is-in').forEach((el) => {
+        el.classList.replace('is-in', 'is-out');
+        setTimeout(() => el.remove(), 400);
+      });
+      const el = document.createElement('div');
+      el.className = 'cap';
+      el.innerHTML = html;
+      captions.appendChild(el);
+      requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('is-in')));
+    },
+    tap(x, y) {
+      const el = document.createElement('div');
+      el.className = 'tap';
+      el.style.left = `${x}px`;
+      el.style.top = `${y}px`;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 700);
+    },
+  };
+</script>
+</body>
+</html>

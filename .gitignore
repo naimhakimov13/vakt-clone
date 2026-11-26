@@ -4,3 +4,5 @@ Thumbs.db
 .idea/
 .vscode/
 *.log
+promo/out/.screens/
+promo/out/.frames/

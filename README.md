@@ -17,6 +17,16 @@ npm install        # Playwright; run `npx playwright install chromium` if the br
 npm test
 ```
 
+## Instagram promo
+
+```sh
+node promo/build-video.js    # promo/out/reel.mp4 + reel-cover.jpg (1080x1920)
+node promo/build-slides.js   # promo/out/slide-1..8.png (1080x1350)
+```
+
+Set `HANDLE="@nick"` to change the signature. The pitch texts are in `promo/text.md`.
+Screens of the current vakt.tj are cached in `promo/assets/`; `--refresh-old` recaptures them.
+
 ## Structure
 
 - `index.html` — header, category bar, product sections, cart, checkout dialog
